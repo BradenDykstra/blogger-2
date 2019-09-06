@@ -8,9 +8,9 @@ export default class BlogController {
     constructor() {
         this.router = express.Router()
             //NOTE all routes after the authenticate method will require the user to be logged in to access
-            .use(Authorize.authenticated)
             .get('', this.getAll)
             .get('/:id', this.getById)
+            .use(Authorize.authenticated)
             .post('', this.create)
             .put('/:id', this.edit)
             .delete('/:id', this.delete)
@@ -30,7 +30,7 @@ export default class BlogController {
             if (!data) {
                 throw new Error("Invalid Id")
             }
-            res.send(data)
+            return res.send(data)
         } catch (error) { next(error) }
     }
 
@@ -39,7 +39,7 @@ export default class BlogController {
             //NOTE the user id is accessable through req.body.uid, never trust the client to provide you this information
             req.body.authorId = req.session.uid
             let data = await _blogService.create(req.body)
-            res.send(data)
+            return res.send(data)
         } catch (error) { next(error) }
     }
 
