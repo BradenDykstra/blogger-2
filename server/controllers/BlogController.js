@@ -1,8 +1,10 @@
 import express from 'express'
 import BlogService from '../services/BlogService';
 import { Authorize } from '../middleware/authorize.js'
+import CommentService from '../services/CommentService';
 
 let _blogService = new BlogService().repository
+let _commentService = new CommentService().repository
 
 export default class BlogController {
     constructor() {
@@ -10,15 +12,20 @@ export default class BlogController {
             //NOTE all routes after the authenticate method will require the user to be logged in to access
             .get('', this.getAll)
             .get('/:id', this.getById)
+            .get('/:id/comments', this.getComments)
+            .get('/:id/comments/:comid', this.getCommentById)
             .use(Authorize.authenticated)
             .post('', this.create)
+            .post('/:id/comments', this.createComment)
             .put('/:id', this.edit)
+            .put('/:id/comments/:comid', this.editComment)
             .delete('/:id', this.delete)
+            .delete('/:id/comments/:comid', this.deleteComment)
     }
 
     async getAll(req, res, next) {
         try {
-            let data = await _blogService.find({})
+            let data = await _blogService.find({}).populate('author', 'name').populate('comments', 'body')
             return res.send(data)
         } catch (error) { next(error) }
 
@@ -26,7 +33,7 @@ export default class BlogController {
 
     async getById(req, res, next) {
         try {
-            let data = await _blogService.findById(req.params.id)
+            let data = await _blogService.findById(req.params.id).populate('author', 'name')
             if (!data) {
                 throw new Error("Invalid Id")
             }
@@ -34,33 +41,75 @@ export default class BlogController {
         } catch (error) { next(error) }
     }
 
+    async getComments(req, res, next) {
+        try {
+            let data = await _commentService.find({ blogId: req.params.id }).populate('author', 'name')
+            return res.send(data)
+        } catch (error) { next(error) }
+    }
+
+    async getCommentById(req, res, next) {
+        try {
+            let data = await _commentService.findById(req.params.comid).populate('author', 'name')
+            if (!data) {
+                throw new Error("Invalid Id")
+            }
+            return res.send(data)
+        } catch (error) {
+            next(error)
+        }
+    }
+
     async create(req, res, next) {
         try {
             //NOTE the user id is accessable through req.body.uid, never trust the client to provide you this information
-            req.body.authorId = req.session.uid
+            req.body.author = req.session.uid
             let data = await _blogService.create(req.body)
+            return res.send(data)
+        } catch (error) { next(error) }
+    }
+
+    async createComment(req, res, next) {
+        try {
+            req.body.author = req.session.uid
+            let data = await _commentService.create(req.body)
             return res.send(data)
         } catch (error) { next(error) }
     }
 
     async edit(req, res, next) {
         try {
-            let data = await _blogService.findOneAndUpdate({ _id: req.params.id, }, req.body, { new: true })
+            let data = await _blogService.findOneAndUpdate({ _id: req.params.id, author: req.session.uid }, req.body, { new: true })
             if (data) {
                 return res.send(data)
             }
             throw new Error("invalid id")
-        } catch (error) {
-            next(error)
-        }
+        } catch (error) { next(error) }
+    }
+
+    async editComment(req, res, next) {
+        try {
+            let data = await _commentService.findOneAndUpdate({ _id: req.params.comid, author: req.session.uid }, req.body, { new: true })
+            if (data) {
+                return res.send(data)
+            }
+            throw new Error("invalid id")
+        } catch (error) { next(error) }
     }
 
     async delete(req, res, next) {
         try {
-            await _blogService.findOneAndRemove({ _id: req.params.id })
+            await _blogService.findOneAndRemove({ _id: req.params.id, author: req.session.uid })
             res.send("deleted blog")
         } catch (error) { next(error) }
 
+    }
+
+    async deleteComment(req, res, next) {
+        try {
+            let data = await _commentService.findOneAndRemove({ _id: req.params.comid, author: req.session.uid })
+            res.send('deleted comment')
+        } catch (error) { next(error) }
     }
 
 }
