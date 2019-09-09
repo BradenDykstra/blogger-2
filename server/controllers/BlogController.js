@@ -99,7 +99,10 @@ export default class BlogController {
 
     async delete(req, res, next) {
         try {
-            await _blogService.findOneAndRemove({ _id: req.params.id, author: req.session.uid })
+            let data = await _blogService.findOneAndRemove({ _id: req.params.id, author: req.session.uid })
+            if (!data) {
+                throw new Error("that's not your blog")
+            }
             res.send("deleted blog")
         } catch (error) { next(error) }
 
