@@ -7,6 +7,7 @@ let _commentService = new CommentService().repository
 export default class CommentController {
   constructor() {
     this.router = express.Router()
+      .use(Authorize.authenticated)
       .post('', this.create)
       .put('/:id', this.edit)
       .delete('/:id', this.delete)

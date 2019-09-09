@@ -4,7 +4,7 @@ const ObjectId = Schema.Types.ObjectId
 
 const _model = new Schema({
     title: { type: String, required: true },
-    body: { type: String, required: true },
+    body: { type: String },
     summary: { type: String },
     img: { type: String },
     author: { type: ObjectId, ref: 'User', required: true },
